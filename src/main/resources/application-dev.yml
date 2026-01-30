@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/emjay_dev_db
+    username: emjay_dev
+    password: emjay_dev
+  
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+  
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.emjay.backend: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+
+server:
+  port: 8080
