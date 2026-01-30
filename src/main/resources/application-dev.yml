@@ -21,6 +21,9 @@ logging:
     com.emjay.backend: DEBUG
     org.springframework.web: DEBUG
     org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.orm.jdbc.bind: TRACE
 
 server:
   port: 8080

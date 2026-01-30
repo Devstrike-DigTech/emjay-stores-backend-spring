@@ -3,17 +3,19 @@
 
 -- Insert default admin user
 -- Password: Admin@123 (BCrypt hash)
-INSERT INTO users (id, email, username, password_hash, first_name, last_name, role, is_active, is_verified)
+INSERT INTO users (id, email, username, password_hash, first_name, last_name, role, is_active, is_verified, created_at, updated_at)
 VALUES (
     '550e8400-e29b-41d4-a716-446655440000'::uuid,
     'admin@emjay.com',
     'admin',
-    '$2a$10$slYQmyNdGzTn7ZLBXBChFOC9f6kFjAqPhccnP6DxlWXx2lPk1C3G6',
+    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhCa',
     'System',
     'Administrator',
-    'ADMIN',
+    'ADMIN'::user_role,
     true,
-    true
+    true,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
 );
 
 -- Insert sample categories

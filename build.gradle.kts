@@ -6,6 +6,8 @@ plugins {
     kotlin("jvm") version "1.9.21"
     kotlin("plugin.spring") version "1.9.21"
     kotlin("plugin.jpa") version "1.9.21"
+    id("org.flywaydb.flyway") version "9.22.3"
+
 }
 
 group = "com.emjay"
@@ -54,6 +56,12 @@ dependencies {
     testImplementation("com.ninja-squad:springmockk:4.0.2")
     testImplementation("org.testcontainers:postgresql:1.19.3")
     testImplementation("org.testcontainers:junit-jupiter:1.19.3")
+}
+
+flyway {
+    url = "jdbc:postgresql://localhost:5432/emjay_dev_db"
+    user = "emjay_dev"
+    password = "emjay_dev"
 }
 
 tasks.withType<KotlinCompile> {
