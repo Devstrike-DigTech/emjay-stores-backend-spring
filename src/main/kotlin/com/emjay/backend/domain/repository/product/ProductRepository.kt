@@ -24,7 +24,8 @@ interface ProductRepository {
     
     fun findByStatus(status: ProductStatus, pageable: Pageable): Page<Product>
     
-    fun findLowStock(): List<Product>
+//    fun findLowStock(): List<Product>
+    fun findLowStock(pageable: Pageable): Page<Product>
     
     fun findOutOfStock(): List<Product>
     

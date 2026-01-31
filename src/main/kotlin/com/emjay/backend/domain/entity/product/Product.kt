@@ -21,8 +21,8 @@ data class Product(
     val minStockThreshold: Int,
     val brand: String?,
     val status: ProductStatus,
-    val createdAt: LocalDateTime? = null,
-    val updatedAt: LocalDateTime? = null
+    val createdAt: LocalDateTime? = LocalDateTime.now(),
+    val updatedAt: LocalDateTime? = LocalDateTime.now()
 ) {
     fun isLowStock(): Boolean = stockQuantity <= minStockThreshold
     
