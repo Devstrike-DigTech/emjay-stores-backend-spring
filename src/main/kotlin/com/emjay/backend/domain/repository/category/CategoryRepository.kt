@@ -8,7 +8,9 @@ import java.util.UUID
  */
 interface CategoryRepository {
     fun save(category: Category): Category
-    
+
+    fun findByName(name: String): Category?
+
     fun findById(id: UUID): Category?
     
     fun findAll(): List<Category>
@@ -22,6 +24,8 @@ interface CategoryRepository {
     fun findSubcategories(parentId: UUID): List<Category>
     
     fun existsByName(name: String): Boolean
+
+    fun countSubcategories(categoryId: UUID): Long
     
     fun existsByNameAndParentId(name: String, parentId: UUID?): Boolean
     

@@ -4,9 +4,13 @@ import com.emjay.backend.application.dto.auth.MessageResponse
 import com.emjay.backend.application.service.ProductImageResponse
 import com.emjay.backend.application.service.ProductImageService
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
@@ -21,8 +25,16 @@ class ProductImageController(
     private val productImageService: ProductImageService
 ) {
 
-    @PostMapping
-    @Operation(summary = "Upload product image (Admin/Manager only)")
+    @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @Operation(
+        summary = "Upload product image (Admin/Manager only)",
+        requestBody = RequestBody(
+            content = [Content(
+                mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                schema = Schema(implementation = ImageUploadRequest::class)
+            )]
+        )
+    )
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     fun uploadImage(
         @PathVariable productId: UUID,
@@ -71,3 +83,16 @@ class ProductImageController(
         return ResponseEntity.ok(MessageResponse("Image deleted successfully"))
     }
 }
+
+// Schema class for Swagger documentation
+@Schema(description = "Image upload request")
+data class ImageUploadRequest(
+    @Schema(description = "Image file", type = "string", format = "binary", required = true)
+    val file: String,
+
+    @Schema(description = "Set as primary image", example = "false", required = false)
+    val isPrimary: Boolean = false,
+
+    @Schema(description = "Display order", example = "0", required = false)
+    val displayOrder: Int = 0
+)
