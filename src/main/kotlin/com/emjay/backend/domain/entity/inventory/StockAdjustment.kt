@@ -1,5 +1,6 @@
 package com.emjay.backend.domain.entity.inventory
 
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -15,6 +16,7 @@ data class StockAdjustment(
     val previousQuantity: Int,
     val newQuantity: Int,
     val reason: String?,
+    val salePrice: BigDecimal?,
     val createdAt: LocalDateTime? = null
 ) {
     fun isAddition(): Boolean = adjustmentType == AdjustmentType.ADDITION
@@ -26,6 +28,9 @@ data class StockAdjustment(
     fun isReturn(): Boolean = adjustmentType == AdjustmentType.RETURN
     
     fun quantityChanged(): Int = newQuantity - previousQuantity
+
+    fun totalSaleAmount(): BigDecimal? = salePrice?.multiply(BigDecimal(quantity))
+
 }
 
 /**

@@ -28,4 +28,6 @@ interface StockAdjustmentRepository {
     fun count(): Long
     
     fun countByProductId(productId: UUID): Long
+
+    fun sumQuantityByProductIdAndType(productId: UUID, type: AdjustmentType): Long
 }

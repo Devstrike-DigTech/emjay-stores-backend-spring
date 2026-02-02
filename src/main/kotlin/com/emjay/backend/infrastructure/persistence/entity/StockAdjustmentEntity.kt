@@ -4,6 +4,7 @@ import com.emjay.backend.domain.entity.inventory.AdjustmentType
 import jakarta.persistence.*
 import org.hibernate.annotations.JdbcTypeCode
 import org.hibernate.type.SqlTypes
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.*
 
@@ -36,6 +37,10 @@ data class StockAdjustmentEntity(
 
     @Column(columnDefinition = "TEXT")
     val reason: String? = null,
+
+    @Column(name = "sale_price", precision = 12, scale = 2)
+    val salePrice: BigDecimal? = null,
+
 
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: LocalDateTime = LocalDateTime.now()
