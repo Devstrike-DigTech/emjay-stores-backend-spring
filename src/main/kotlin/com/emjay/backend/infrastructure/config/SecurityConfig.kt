@@ -1,6 +1,6 @@
 package com.emjay.backend.infrastructure.config
 
-import com.emjay.backend.infrastructure.security.filter.JwtAuthenticationFilter
+import com.emjay.backend.common.infrastructure.security.filter.JwtAuthenticationFilter
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
