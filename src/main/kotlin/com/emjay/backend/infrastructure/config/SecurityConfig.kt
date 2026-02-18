@@ -41,7 +41,46 @@ class SecurityConfig(
                         "/actuator/health",
                         "/error"
                     ).permitAll()
-                    
+
+                    // Public endpoints - No authentication required
+                    .requestMatchers(
+                        "/api/v1/customers/register",
+                        "/api/v1/customers/login",
+                        "/api/v1/customers/auth/google",
+                        "/api/v1/customers/guest/session",
+                        "/api/v1/customers/guest/session/**",
+                        "/api/v1/payments/initiate",
+
+                        "/api/v1/payments/webhook/**",
+                        "/api/v1/payments/paystack/callback",      // ← Add explicit
+                        "/api/v1/payments/flutterwave/callback",   // ← Add explicit
+                        "/api/v1/payments/stripe/callback"         // ← Add explicit
+                    ).permitAll()
+
+                    // Swagger/OpenAPI endpoints
+                    .requestMatchers(
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/swagger-resources/**",
+                        "/webjars/**"
+                    ).permitAll()
+
+                    // Health check endpoints
+                    .requestMatchers("/actuator/**").permitAll()
+
+                    // Public cart endpoints (for guest)
+                    .requestMatchers(HttpMethod.GET, "/api/v1/cart").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/cart/guest").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/cart/items").permitAll()
+
+                    // Guest checkout
+                    .requestMatchers(HttpMethod.POST, "/api/v1/orders/checkout").permitAll()
+
+                    // Public product browsing (from Phase 1)
+                    .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
+
+
                     // Admin only endpoints
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     
@@ -57,8 +96,8 @@ class SecurityConfig(
                     .requestMatchers(
                         HttpMethod.DELETE, "/api/v1/products/**"
                     ).hasAnyRole("ADMIN", "MANAGER")
-                    
-                    // All authenticated users
+
+                    // All other endpoints require authentication
                     .anyRequest().authenticated()
             }
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
