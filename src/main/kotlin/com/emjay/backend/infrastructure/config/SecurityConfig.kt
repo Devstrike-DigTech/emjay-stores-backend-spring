@@ -80,6 +80,27 @@ class SecurityConfig(
                     .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
 
+                    // ========== NEW: PUBLIC BUNDLES & PROMOTIONS ==========
+                    // Public bundle browsing
+                    .requestMatchers(HttpMethod.GET, "/api/v1/bundles").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/bundles/active").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/bundles/**").permitAll()
+
+                    // Public promotion viewing
+                    .requestMatchers(HttpMethod.GET, "/api/v1/promotions/active").permitAll()
+
+                    // Public promo code validation (customers need this at checkout)
+                    .requestMatchers(HttpMethod.POST, "/api/v1/promotions/validate-code").permitAll()
+
+
+// ========== BLOG/CMS (Public) ==========
+                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/posts").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/posts/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/categories").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/tags").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/search").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/blog/posts/*/comments").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/posts/*/comments").permitAll()
 
                     // Admin only endpoints
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
