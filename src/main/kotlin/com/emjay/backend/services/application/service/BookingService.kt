@@ -1,6 +1,7 @@
 package com.emjay.backend.services.application.service
 
 import com.emjay.backend.domain.exception.ResourceNotFoundException
+import com.emjay.backend.notifications.application.service.NotificationService
 import com.emjay.backend.services.application.dto.*
 import com.emjay.backend.services.domain.entity.*
 import com.emjay.backend.services.domain.repository.*
@@ -19,7 +20,8 @@ class BookingService(
     private val serviceAddonRepository: ServiceAddonRepository,
     private val bookingAddonRepository: BookingAddonRepository,
     private val bookingStatusHistoryRepository: BookingStatusHistoryRepository,
-    private val availabilityService: AvailabilityService
+    private val availabilityService: AvailabilityService,
+    private val notificationService: NotificationService
 ) {
 
     /**
@@ -109,6 +111,13 @@ class BookingService(
         recordStatusChange(savedBooking.id!!, null, BookingStatus.PENDING, customerId)
 
         // Step 9: TODO - Initiate payment using existing payment gateway
+
+        // Step 9: Send booking confirmation notification
+        sendBookingConfirmationNotification(savedBooking, service, customerId)
+
+        // Step 10: Schedule 24hr reminder
+        scheduleBookingReminder(savedBooking, service, customerId)
+
 
         return toBookingResponse(savedBooking, addons)
     }
@@ -419,5 +428,150 @@ class BookingService(
             price = bookingAddon.price,
             durationMinutes = bookingAddon.durationMinutes
         )
+    }
+
+
+    // ========== NOTIFICATION HELPER METHODS ==========
+
+    private fun sendBookingConfirmationNotification(booking: Booking, service: com.emjay.backend.services.domain.entity.Service, customerId: UUID) {
+        try {
+            // TODO: Fetch actual customer details
+            val customerEmail = "customer@example.com"  // Replace with actual customer fetch
+            val customerPhone = "+234801234567"  // Replace with actual customer fetch
+            val customerName = "Customer"  // Replace with actual customer fetch
+
+            // Send Email
+            notificationService.queueNotification(
+                com.emjay.backend.notifications.application.dto.QueueNotificationRequest(
+                    recipientId = customerId,
+                    recipientEmail = customerEmail,
+                    recipientName = customerName,
+                    notificationType = com.emjay.backend.notifications.domain.entity.NotificationType.BOOKING_CONFIRMATION,
+                    channel = com.emjay.backend.notifications.domain.entity.NotificationChannel.EMAIL,
+                    subject = "Booking Confirmed - ${booking.bookingNumber}",
+                    htmlContent = buildBookingConfirmationEmail(booking, service),
+                    relatedEntityType = "BOOKING",
+                    relatedEntityId = booking.id
+                )
+            )
+
+            // Send SMS
+            notificationService.queueNotification(
+                com.emjay.backend.notifications.application.dto.QueueNotificationRequest(
+                    recipientId = customerId,
+                    recipientPhone = customerPhone,
+                    recipientName = customerName,
+                    notificationType = com.emjay.backend.notifications.domain.entity.NotificationType.BOOKING_CONFIRMATION,
+                    channel = com.emjay.backend.notifications.domain.entity.NotificationChannel.SMS,
+                    message = "Booking confirmed! ${service.name} on ${booking.bookingDate} at ${booking.startTime}. Booking #${booking.bookingNumber}. -Emjay",
+                    relatedEntityType = "BOOKING",
+                    relatedEntityId = booking.id
+                )
+            )
+        } catch (e: Exception) {
+            println("Failed to send booking confirmation: ${e.message}")
+        }
+    }
+
+    private fun scheduleBookingReminder(booking: Booking, service: com.emjay.backend.services.domain.entity.Service, customerId: UUID) {
+        try {
+            val reminderTime = booking.bookingDate.atTime(booking.startTime).minusHours(24)
+
+            // Only schedule if booking is more than 24 hours away
+            if (reminderTime.isAfter(LocalDateTime.now())) {
+                // TODO: Fetch actual customer details
+                val customerEmail = "customer@example.com"
+                val customerPhone = "+234801234567"
+                val customerName = "Customer"
+
+                // Schedule Email Reminder
+                notificationService.queueNotification(
+                    com.emjay.backend.notifications.application.dto.QueueNotificationRequest(
+                        recipientId = customerId,
+                        recipientEmail = customerEmail,
+                        recipientName = customerName,
+                        notificationType = com.emjay.backend.notifications.domain.entity.NotificationType.BOOKING_REMINDER,
+                        channel = com.emjay.backend.notifications.domain.entity.NotificationChannel.EMAIL,
+                        scheduledFor = reminderTime,
+                        subject = "Reminder: Appointment Tomorrow",
+                        htmlContent = buildBookingReminderEmail(booking, service),
+                        relatedEntityType = "BOOKING",
+                        relatedEntityId = booking.id
+                    )
+                )
+
+                // Schedule SMS Reminder
+                notificationService.queueNotification(
+                    com.emjay.backend.notifications.application.dto.QueueNotificationRequest(
+                        recipientId = customerId,
+                        recipientPhone = customerPhone,
+                        recipientName = customerName,
+                        notificationType = com.emjay.backend.notifications.domain.entity.NotificationType.BOOKING_REMINDER,
+                        channel = com.emjay.backend.notifications.domain.entity.NotificationChannel.SMS,
+                        scheduledFor = reminderTime,
+                        message = "Reminder: You have an appointment for ${service.name} tomorrow at ${booking.startTime}. See you soon! -Emjay",
+                        relatedEntityType = "BOOKING",
+                        relatedEntityId = booking.id
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            println("Failed to schedule booking reminder: ${e.message}")
+        }
+    }
+
+    private fun buildBookingConfirmationEmail(booking: Booking, service: com.emjay.backend.services.domain.entity.Service): String {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+                    .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+                    .content { padding: 20px; }
+                    .booking-details { background: #F3F4F6; padding: 15px; margin: 20px 0; border-radius: 5px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>✅ Booking Confirmed!</h1>
+                </div>
+                <div class="content">
+                    <p>Your appointment has been confirmed.</p>
+                    
+                    <div class="booking-details">
+                        <h3>Appointment Details</h3>
+                        <p><strong>Booking Number:</strong> ${booking.bookingNumber}</p>
+                        <p><strong>Service:</strong> ${service.name}</p>
+                        <p><strong>Date:</strong> ${booking.bookingDate}</p>
+                        <p><strong>Time:</strong> ${booking.startTime}</p>
+                        <p><strong>Duration:</strong> ${service.durationMinutes} minutes</p>
+                        <p><strong>Total Amount:</strong> ₦${booking.totalAmount}</p>
+                    </div>
+                    
+                    <p>We'll send you a reminder 24 hours before your appointment.</p>
+                    <p>See you soon!</p>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+    }
+
+    private fun buildBookingReminderEmail(booking: Booking, service: com.emjay.backend.services.domain.entity.Service): String {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <body style="font-family: Arial, sans-serif;">
+                <h2>🔔 Appointment Reminder</h2>
+                <p>This is a reminder about your upcoming appointment:</p>
+                <ul>
+                    <li><strong>Service:</strong> ${service.name}</li>
+                    <li><strong>Date & Time:</strong> ${booking.bookingDate} at ${booking.startTime}</li>
+                    <li><strong>Duration:</strong> ${service.durationMinutes} minutes</li>
+                </ul>
+                <p>We look forward to seeing you!</p>
+            </body>
+            </html>
+        """.trimIndent()
     }
 }

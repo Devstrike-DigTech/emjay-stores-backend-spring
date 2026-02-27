@@ -3,6 +3,7 @@ package com.emjay.backend.ecommerce.application.service
 import com.emjay.backend.domain.exception.ResourceNotFoundException
 import com.emjay.backend.ecommerce.application.dto.order.*
 import com.emjay.backend.ecommerce.domain.entity.cart.CartStatus
+import com.emjay.backend.ecommerce.domain.entity.customer.Customer
 import com.emjay.backend.ecommerce.domain.entity.customer.CustomerAddress
 import com.emjay.backend.ecommerce.domain.entity.order.*
 import com.emjay.backend.ecommerce.domain.repository.cart.CartItemRepository
@@ -11,6 +12,10 @@ import com.emjay.backend.ecommerce.domain.repository.customer.CustomerAddressRep
 import com.emjay.backend.ecommerce.domain.repository.customer.CustomerRepository
 import com.emjay.backend.ecommerce.domain.repository.order.*
 import com.emjay.backend.ims.domain.repository.product.ProductRepository
+import com.emjay.backend.notifications.application.dto.QueueNotificationRequest
+import com.emjay.backend.notifications.application.service.NotificationService
+import com.emjay.backend.notifications.domain.entity.NotificationChannel
+import com.emjay.backend.notifications.domain.entity.NotificationType
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -29,7 +34,8 @@ class OrderService(
     private val customerRepository: CustomerRepository,
     private val customerAddressRepository: CustomerAddressRepository,
     private val productRepository: ProductRepository,
-    private val orderStatusHistoryRepository: OrderStatusHistoryRepository
+    private val orderStatusHistoryRepository: OrderStatusHistoryRepository,
+    private val notificationService: NotificationService
 ) {
 
     companion object {
@@ -155,6 +161,12 @@ class OrderService(
 
         // Record status history
         recordStatusChange(savedOrder.id!!, null, OrderStatus.PENDING_PAYMENT, null)
+
+        // Send order confirmation notification
+        val customer = customerRepository.findById(actualCustomerId)
+            ?: throw ResourceNotFoundException("Customer not found")
+        sendOrderConfirmationNotification(savedOrder, customer)
+
 
         return CheckoutResponse(
             order = toOrderResponse(savedOrder, orderItems),
@@ -282,5 +294,135 @@ class OrderService(
             paymentStatus = payment.paymentStatus,
             amount = payment.amount
         )
+    }
+
+
+    // ========== NOTIFICATION HELPER METHODS ==========
+
+    private fun sendOrderConfirmationNotification(order: Order, customer: Customer) {
+        try {
+            val shippingAddress = "${order.shippingAddressLine1}, ${order.shippingCity}, ${order.shippingState}"
+
+            // Send Email
+            notificationService.queueNotification(
+                QueueNotificationRequest(
+                    recipientId = customer.id,
+                    recipientEmail = customer.email,
+                    recipientName = "${customer.firstName} ${customer.lastName}",
+                    notificationType = com.emjay.backend.notifications.domain.entity.NotificationType.ORDER_CONFIRMATION,
+                    channel = com.emjay.backend.notifications.domain.entity.NotificationChannel.EMAIL,
+                    subject = "Order Confirmed - ${order.orderNumber}",
+                    htmlContent = buildOrderConfirmationEmail(order, customer, shippingAddress),
+                    relatedEntityType = "ORDER",
+                    relatedEntityId = order.id
+                )
+            )
+
+            // Send SMS if phone available
+            customer.phone?.let { phone ->
+                notificationService.queueNotification(
+                    QueueNotificationRequest(
+                        recipientId = customer.id,
+                        recipientPhone = phone,
+                        recipientName = "${customer.firstName} ${customer.lastName}",
+                        notificationType = NotificationType.ORDER_CONFIRMATION,
+                        channel = NotificationChannel.SMS,
+                        message = "Hi ${customer.firstName}! Your order #${order.orderNumber} (₦${order.totalAmount}) has been confirmed. Track at emjay.com/orders/${order.orderNumber}",
+                        relatedEntityType = "ORDER",
+                        relatedEntityId = order.id
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            // Log but don't fail order creation
+            println("Failed to send order confirmation notification: ${e.message}")
+        }
+    }
+
+    private fun buildOrderConfirmationEmail(
+        order: Order,
+        customer: Customer,
+        shippingAddress: String
+    ): String {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+                    .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+                    .content { padding: 20px; }
+                    .order-details { background: #F3F4F6; padding: 15px; margin: 20px 0; border-radius: 5px; }
+                    .footer { background: #F3F4F6; padding: 20px; text-align: center; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>🎉 Order Confirmed!</h1>
+                </div>
+                <div class="content">
+                    <p>Hi ${customer.firstName},</p>
+                    <p>Thank you for your order! Your order <strong>#${order.orderNumber}</strong> has been confirmed.</p>
+                    
+                    <div class="order-details">
+                        <h3>Order Details</h3>
+                        <p><strong>Order Number:</strong> ${order.orderNumber}</p>
+                        <p><strong>Order Date:</strong> ${order.orderedAt}</p>
+                        <p><strong>Total Amount:</strong> ₦${order.totalAmount}</p>
+                        <p><strong>Delivery Address:</strong> $shippingAddress</p>
+                    </div>
+                    
+                    <p>We'll send you another email when your order ships.</p>
+                    <p>Thank you for shopping with Emjay!</p>
+                </div>
+                <div class="footer">
+                    <p>© 2026 Emjay Beauty. All rights reserved.</p>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+    }
+
+    fun sendPaymentReceivedNotification(order: Order, payment: Payment, customer: Customer) {
+        try {
+            // Send Email
+            notificationService.queueNotification(
+                QueueNotificationRequest(
+                    recipientId = customer.id,
+                    recipientEmail = customer.email,
+                    recipientName = "${customer.firstName} ${customer.lastName}",
+                    notificationType = NotificationType.PAYMENT_RECEIVED,
+                    channel = NotificationChannel.EMAIL,
+                    subject = "Payment Received - ₦${payment.amount}",
+                    htmlContent = """
+                        <h1>Payment Received</h1>
+                        <p>Hi ${customer.firstName},</p>
+                        <p>We've received your payment of <strong>₦${payment.amount}</strong> for order #${order.orderNumber}.</p>
+                        <p><strong>Transaction ID:</strong> ${payment.id ?: "Pending"}</p>
+                        <p>Your order is now being processed.</p>
+                        <p>Thank you!</p>
+                    """,
+                    relatedEntityType = "PAYMENT",
+                    relatedEntityId = payment.id
+                )
+            )
+
+            // Send SMS
+            customer.phone?.let { phone ->
+                notificationService.queueNotification(
+                    QueueNotificationRequest(
+                        recipientId = customer.id,
+                        recipientPhone = phone,
+                        notificationType = NotificationType.PAYMENT_RECEIVED,
+                        channel = NotificationChannel.SMS,
+                        message = "Payment of ₦${payment.amount} received for order #${order.orderNumber}. Thank you! -Emjay",
+                        relatedEntityType = "PAYMENT",
+                        relatedEntityId = payment.id
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            println("Failed to send payment notification: ${e.message}")
+        }
     }
 }
