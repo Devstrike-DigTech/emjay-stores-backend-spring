@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "emjay-backend",
+      "runtimeExecutable": "./gradlew",
+      "runtimeArgs": ["bootRun", "--args=--spring.profiles.active=dev"],
+      "port": 8080
+    }
+  ]
+}

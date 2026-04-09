@@ -1,22 +1,49 @@
+# Production profile — activated by -Dspring.profiles.active=prod (set in Dockerfile)
+# Overrides values from application.yml for production deployment on Railway.
+
 spring:
   jpa:
     show-sql: false
     hibernate:
       ddl-auto: validate
-  
+
   devtools:
     restart:
       enabled: false
 
+  # Railway free-tier PostgreSQL limits connections — keep pool conservative
+  datasource:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+# ── Server ────────────────────────────────────────────────────────────────────
+# Railway injects PORT; fall back to 8080
+server:
+  port: ${PORT:8080}
+  error:
+    include-stacktrace: never
+    include-exception: false
+    include-message: always
+    include-binding-errors: always
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+# Quieter in prod — Railway captures stdout/stderr so no file logging needed
 logging:
   level:
     root: WARN
     com.emjay.backend: INFO
     org.springframework.web: WARN
-    org.springframework.security: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+  file:
+    name: ""   # Disable file logging in production
 
-server:
-  port: ${SERVER_PORT:8080}
-  error:
-    include-stacktrace: never
-    include-exception: false
+# ── Swagger ───────────────────────────────────────────────────────────────────
+# Disabled in production — re-enable temporarily if you need to inspect the API
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false

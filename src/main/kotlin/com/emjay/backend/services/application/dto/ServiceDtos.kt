@@ -374,6 +374,8 @@ data class BookingSummaryResponse(
     val staffName: String,
     val bookingDate: LocalDate,
     val startTime: LocalTime,
+    val endTime: LocalTime,
+    val durationMinutes: Int,
     val status: BookingStatus,
     val totalAmount: BigDecimal,
     val isPaid: Boolean

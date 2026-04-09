@@ -158,6 +158,28 @@ class BookingService(
     }
 
     /**
+     * Admin: list ALL bookings across all customers, optionally filtered by status.
+     */
+    fun getAllBookings(page: Int = 0, size: Int = 20, status: BookingStatus? = null): BookingListResponse {
+        val pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "bookingDate"))
+        val bookings = if (status != null) {
+            bookingRepository.findByStatus(status, pageable)
+        } else {
+            // Use a wide date range to get all bookings
+            val start = java.time.LocalDate.of(2000, 1, 1)
+            val end = java.time.LocalDate.now().plusYears(10)
+            bookingRepository.findByDateRange(start, end, pageable)
+        }
+        return BookingListResponse(
+            content = bookings.content.map { toBookingSummary(it) },
+            totalElements = bookings.totalElements,
+            totalPages = bookings.totalPages,
+            currentPage = page,
+            pageSize = size
+        )
+    }
+
+    /**
      * Confirm booking (admin/staff action)
      */
     @Transactional
@@ -401,10 +423,12 @@ class BookingService(
         return BookingSummaryResponse(
             id = booking.id.toString(),
             bookingNumber = booking.bookingNumber,
-            serviceName = "Service", // TODO: Fetch
-            staffName = "Staff", // TODO: Fetch
+            serviceName = "Service", // TODO: Fetch from service repository
+            staffName = "Staff", // TODO: Fetch from staff repository
             bookingDate = booking.bookingDate,
             startTime = booking.startTime,
+            endTime = booking.endTime,
+            durationMinutes = booking.durationMinutes,
             status = booking.status,
             totalAmount = booking.totalAmount,
             isPaid = booking.isPaid()

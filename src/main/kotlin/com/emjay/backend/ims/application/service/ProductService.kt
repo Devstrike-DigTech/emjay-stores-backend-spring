@@ -7,6 +7,7 @@ import com.emjay.backend.ims.application.dto.product.UpdateProductRequest
 import com.emjay.backend.ims.domain.entity.product.Product
 import com.emjay.backend.domain.exception.ResourceAlreadyExistsException
 import com.emjay.backend.domain.exception.ResourceNotFoundException
+import com.emjay.backend.ims.domain.repository.category.CategoryRepository
 import com.emjay.backend.ims.domain.repository.product.ProductImageRepository
 import com.emjay.backend.ims.domain.repository.product.ProductRepository
 import org.springframework.data.domain.Page
@@ -19,7 +20,8 @@ import java.util.*
 @Service
 class ProductService(
     private val productRepository: ProductRepository,
-    private val productImageRepository: ProductImageRepository
+    private val productImageRepository: ProductImageRepository,
+    private val categoryRepository: CategoryRepository
 ) {
 
     @Transactional
@@ -131,12 +133,14 @@ class ProductService(
                     displayOrder = image.displayOrder
                 )
             }
+        val categoryName = categoryRepository.findById(product.categoryId)?.name
         return ProductResponse(
             id = product.id.toString(),
             sku = product.sku,
             name = product.name,
             description = product.description,
             categoryId = product.categoryId.toString(),
+            categoryName = categoryName,
             supplierId = product.supplierId?.toString(),
             retailPrice = product.retailPrice,
             wholesalePrice = product.wholesalePrice,
@@ -149,8 +153,8 @@ class ProductService(
             isOutOfStock = product.isOutOfStock(),
             profitMargin = product.profitMargin(),
             totalValue = product.totalValue(),
+            createdAt = product.createdAt?.toString(),
             images = images
-
         )
     }
 

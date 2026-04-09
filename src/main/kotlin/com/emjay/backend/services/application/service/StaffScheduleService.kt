@@ -196,10 +196,12 @@ class StaffScheduleService(
     private fun toBookingSummary(booking: Booking) = BookingSummaryResponse(
         id = booking.id.toString(),
         bookingNumber = booking.bookingNumber,
-        serviceName = "Service", // TODO: Fetch
-        staffName = "Staff",
+        serviceName = "Service", // TODO: Fetch from service repository
+        staffName = "Staff", // TODO: Fetch from staff repository
         bookingDate = booking.bookingDate,
         startTime = booking.startTime,
+        endTime = booking.endTime,
+        durationMinutes = booking.durationMinutes,
         status = booking.status,
         totalAmount = booking.totalAmount,
         isPaid = booking.isPaid()

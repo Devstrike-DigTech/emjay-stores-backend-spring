@@ -134,3 +134,10 @@ data class RealTimeMetricsResponse(
     val onlineCustomers: Int,
     val pendingPayments: Int
 )
+
+data class DaySalesResponse(
+    val dayName: String,
+    val dayIndex: Int,  // 0=Sunday, 1=Monday ... 6=Saturday
+    val totalSales: BigDecimal,
+    val unitsSold: Int
+)

@@ -1,5 +1,4 @@
 package com.emjay.backend.analytics.presentation.controller
-
 import com.emjay.backend.analytics.application.dto.*
 import com.emjay.backend.analytics.application.service.AnalyticsService
 import com.emjay.backend.analytics.domain.entity.ReportPeriod
@@ -31,6 +30,13 @@ class AnalyticsController(
     }
 
     // ========== SALES ANALYTICS ==========
+
+    @GetMapping("/sales/by-day")
+    @Operation(summary = "Get sales breakdown by day of week")
+    fun getSalesByDayOfWeek(): ResponseEntity<List<DaySalesResponse>> {
+        val data = analyticsService.getSalesByDayOfWeek()
+        return ResponseEntity.ok(data)
+    }
 
     @GetMapping("/sales/summary")
     @Operation(summary = "Get sales summary for date range")

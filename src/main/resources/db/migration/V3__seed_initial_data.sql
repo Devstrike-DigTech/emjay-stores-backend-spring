@@ -8,7 +8,7 @@ VALUES (
     '550e8400-e29b-41d4-a716-446655440000'::uuid,
     'admin@emjay.com',
     'admin',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhCa',
+    '$2a$12$DDmCNnrqzv5jHOTB1k2CmeA205/2OrDu2KI1FDA3I9/I4vP73x1Wy',
     'System',
     'Administrator',
     'ADMIN'::user_role,

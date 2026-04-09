@@ -67,6 +67,7 @@ data class ProductResponse(
     val name: String,
     val description: String?,
     val categoryId: String,
+    val categoryName: String?,
     val supplierId: String?,
     val retailPrice: BigDecimal,
     val wholesalePrice: BigDecimal?,
@@ -79,6 +80,7 @@ data class ProductResponse(
     val isOutOfStock: Boolean,
     val profitMargin: BigDecimal,
     val totalValue: BigDecimal,
+    val createdAt: String?,
     val images: List<ProductImageInfo> = emptyList()
 )
 

@@ -3,6 +3,7 @@ package com.emjay.backend.services.presentation.controller
 import com.emjay.backend.common.infrastructure.security.jwt.JwtTokenProvider
 import com.emjay.backend.services.application.dto.*
 import com.emjay.backend.services.application.service.*
+import com.emjay.backend.services.domain.entity.BookingStatus
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -357,5 +358,28 @@ class StaffScheduleController(
         val jwt = token.removePrefix("Bearer ")
         val userId = jwtUtil.getUserIdFromToken(jwt)
         return userId
+    }
+}
+
+// ========== ADMIN BOOKING CONTROLLER ==========
+
+@RestController
+@RequestMapping("/api/v1/bookings/admin")
+@Tag(name = "Admin Bookings", description = "Admin endpoints for managing all bookings")
+@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF')")
+@SecurityRequirement(name = "bearerAuth")
+class AdminBookingController(
+    private val bookingService: BookingService
+) {
+
+    @GetMapping
+    @Operation(summary = "Get all bookings (admin view, paginated)")
+    fun getAllBookings(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+        @RequestParam(required = false) status: BookingStatus?
+    ): ResponseEntity<BookingListResponse> {
+        val response = bookingService.getAllBookings(page, size, status)
+        return ResponseEntity.ok(response)
     }
 }

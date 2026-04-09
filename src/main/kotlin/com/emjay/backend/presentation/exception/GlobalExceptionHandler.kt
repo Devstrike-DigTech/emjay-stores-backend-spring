@@ -3,6 +3,7 @@ package com.emjay.backend.presentation.exception
 import com.emjay.backend.domain.exception.*
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -127,6 +128,20 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error)
     }
     
+    @ExceptionHandler(AccessDeniedException::class)
+    fun handleAccessDenied(
+        ex: AccessDeniedException,
+        request: WebRequest
+    ): ResponseEntity<ErrorResponse> {
+        val error = ErrorResponse(
+            status = HttpStatus.FORBIDDEN.value(),
+            error = "Forbidden",
+            message = "Access denied. You do not have permission to perform this action.",
+            path = request.getDescription(false).removePrefix("uri=")
+        )
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error)
+    }
+
     @ExceptionHandler(Exception::class)
     fun handleGenericException(
         ex: Exception,

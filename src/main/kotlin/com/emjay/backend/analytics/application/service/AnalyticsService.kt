@@ -4,6 +4,7 @@ import com.emjay.backend.analytics.application.dto.*
 import com.emjay.backend.analytics.domain.entity.*
 import com.emjay.backend.analytics.domain.repository.*
 import com.emjay.backend.ecommerce.domain.repository.order.OrderRepository
+import com.emjay.backend.ims.infrastructure.persistence.repository.JpaStockAdjustmentRepository
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -17,7 +18,8 @@ class AnalyticsService(
     private val productPerformanceRepository: ProductPerformanceRepository,
     private val adminCustomerAnalyticsRepository: AdminCustomerAnalyticsRepository,
     private val dashboardMetricsRepository: DashboardMetricsRepository,
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    private val jpaStockAdjustmentRepository: JpaStockAdjustmentRepository
 ) {
 
     // ========== SALES ANALYTICS ==========
@@ -163,6 +165,28 @@ class AnalyticsService(
 
             metrics = buildDashboardMetrics()
         )
+    }
+
+    // ========== SALES BY DAY OF WEEK ==========
+
+    fun getSalesByDayOfWeek(): List<DaySalesResponse> {
+        val dayNames = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+        val rawData = jpaStockAdjustmentRepository.getSalesByDayOfWeek()
+        val dataMap = rawData.associate { row ->
+            (row[0] as Number).toInt() to Pair(
+                (row[1] as? BigDecimal) ?: BigDecimal.valueOf((row[1] as Number).toLong()),
+                (row[2] as Number).toLong()
+            )
+        }
+        return (0..6).map { dayIndex ->
+            val (sales, units) = dataMap[dayIndex] ?: Pair(BigDecimal.ZERO, 0L)
+            DaySalesResponse(
+                dayName = dayNames[dayIndex],
+                dayIndex = dayIndex,
+                totalSales = sales,
+                unitsSold = units.toInt()
+            )
+        }
     }
 
     // ========== SCHEDULED JOBS ==========

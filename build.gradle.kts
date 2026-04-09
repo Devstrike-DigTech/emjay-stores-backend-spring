@@ -28,6 +28,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
     
     // Kotlin
     implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -43,6 +44,9 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
     implementation("org.flywaydb:flyway-core")
     
+    // Cloudinary
+    implementation("com.cloudinary:cloudinary-http44:1.37.0")
+
     // OpenAPI/Swagger
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
     
@@ -59,9 +63,12 @@ dependencies {
 }
 
 flyway {
-    url = "jdbc:postgresql://localhost:5432/emjay_dev_db"
-    user = "emjay_dev"
-    password = "emjay_dev"
+    // Used only for local Gradle Flyway CLI tasks (e.g. flywayMigrate).
+    // Runtime migrations are handled by Spring Boot's Flyway auto-configuration
+    // using the datasource credentials from application.yml / env vars.
+    url      = System.getenv("FLYWAY_URL")      ?: "jdbc:postgresql://localhost:5432/emjay_dev_db"
+    user     = System.getenv("FLYWAY_USER")     ?: "emjay_dev"
+    password = System.getenv("FLYWAY_PASSWORD") ?: "emjay_dev"
 }
 
 tasks.withType<KotlinCompile> {

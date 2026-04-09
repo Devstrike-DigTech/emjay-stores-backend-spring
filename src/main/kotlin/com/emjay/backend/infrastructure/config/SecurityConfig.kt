@@ -4,6 +4,10 @@ import com.emjay.backend.common.infrastructure.security.filter.JwtAuthentication
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -22,7 +26,33 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 class SecurityConfig(
     private val jwtAuthenticationFilter: JwtAuthenticationFilter
 ) {
-    
+
+    // ──────────────────────────────────────────────────────────────────
+    // Role Hierarchy  (method-level only — Spring Security 6.2 does NOT
+    // apply RoleHierarchy to authorizeHttpRequests automatically).
+    //
+    // ADMIN  > MANAGER > STAFF
+    //
+    // Effect: an ADMIN token satisfies every @PreAuthorize role check.
+    // URL-level rules use hasAnyRole("ADMIN","MANAGER") explicitly.
+    // ──────────────────────────────────────────────────────────────────
+
+    @Bean
+    fun roleHierarchy(): RoleHierarchy =
+        RoleHierarchyImpl().apply {
+            setHierarchy("ROLE_ADMIN > ROLE_MANAGER\nROLE_MANAGER > ROLE_STAFF")
+        }
+
+    /**
+     * Wire role hierarchy into @PreAuthorize / @PostAuthorize expressions.
+     * Without this bean, method-level security ignores the hierarchy.
+     */
+    @Bean
+    fun methodSecurityExpressionHandler(roleHierarchy: RoleHierarchy): MethodSecurityExpressionHandler =
+        DefaultMethodSecurityExpressionHandler().apply {
+            setRoleHierarchy(roleHierarchy)
+        }
+
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
@@ -31,7 +61,7 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth
-                    // Public endpoints
+                    // ── Public: no token required ──────────────────────────────
                     .requestMatchers(
                         "/api/v1/auth/**",
                         "/api-docs/**",
@@ -39,10 +69,10 @@ class SecurityConfig(
                         "/swagger-ui.html",
                         "/v3/api-docs/**",
                         "/actuator/health",
-                        "/error"
+                        "/error",
+                        "/ws/**"
                     ).permitAll()
 
-                    // Public endpoints - No authentication required
                     .requestMatchers(
                         "/api/v1/customers/register",
                         "/api/v1/customers/login",
@@ -50,14 +80,12 @@ class SecurityConfig(
                         "/api/v1/customers/guest/session",
                         "/api/v1/customers/guest/session/**",
                         "/api/v1/payments/initiate",
-
                         "/api/v1/payments/webhook/**",
-                        "/api/v1/payments/paystack/callback",      // ← Add explicit
-                        "/api/v1/payments/flutterwave/callback",   // ← Add explicit
-                        "/api/v1/payments/stripe/callback"         // ← Add explicit
+                        "/api/v1/payments/paystack/callback",
+                        "/api/v1/payments/flutterwave/callback",
+                        "/api/v1/payments/stripe/callback"
                     ).permitAll()
 
-                    // Swagger/OpenAPI endpoints
                     .requestMatchers(
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
@@ -65,87 +93,128 @@ class SecurityConfig(
                         "/webjars/**"
                     ).permitAll()
 
-                    // Health check endpoints
                     .requestMatchers("/actuator/**").permitAll()
 
-                    // Public cart endpoints (for guest)
-                    .requestMatchers(HttpMethod.GET, "/api/v1/cart").permitAll()
+                    // Public cart (guest)
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/cart").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/cart/guest").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/cart/items").permitAll()
 
                     // Guest checkout
                     .requestMatchers(HttpMethod.POST, "/api/v1/orders/checkout").permitAll()
 
-                    // Public product browsing (from Phase 1)
+                    // Public browsing — products & categories
                     .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
 
-                    // ========== NEW: PUBLIC BUNDLES & PROMOTIONS ==========
-                    // Public bundle browsing
-                    .requestMatchers(HttpMethod.GET, "/api/v1/bundles").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/bundles/active").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/bundles/**").permitAll()
+                    // Public reviews
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/products/*/reviews").permitAll()
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/products/*/reviews/summary").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/products/*/reviews").permitAll()
 
-                    // Public promotion viewing
-                    .requestMatchers(HttpMethod.GET, "/api/v1/promotions/active").permitAll()
-
-                    // Public promo code validation (customers need this at checkout)
+                    // Public bundles & promotions
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/bundles").permitAll()
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/bundles/active").permitAll()
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/bundles/**").permitAll()
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/promotions/active").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/promotions/validate-code").permitAll()
 
+                    // Public ads
+                    .requestMatchers(HttpMethod.GET, "/api/v1/ads").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/ads/active").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/ads/**").permitAll()
 
-// ========== BLOG/CMS (Public) ==========
-                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/posts").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/posts/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/categories").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/tags").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/search").permitAll()
+                    // Public store info
+                    .requestMatchers(HttpMethod.GET, "/api/v1/settings/store").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/settings/contact").permitAll()
+
+                    // Public blog / CMS
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/blog/posts").permitAll()
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/blog/posts/**").permitAll()
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/blog/categories").permitAll()
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/blog/tags").permitAll()
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/blog/search").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/blog/posts/*/comments").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/blog/posts/*/comments").permitAll()
+                    .requestMatchers(HttpMethod.GET,  "/api/v1/blog/posts/*/comments").permitAll()
 
-                    // Admin only endpoints
+                    // ── ADMIN + MANAGER access ──────────────────────────────────
+                    // Role hierarchy applies to @PreAuthorize only (Spring Security 6.2).
+                    // URL-level rules must list both roles explicitly.
+
+                    .requestMatchers(HttpMethod.GET,    "/api/v1/analytics/**").hasAnyRole("ADMIN", "MANAGER")
+
+                    .requestMatchers(HttpMethod.POST,   "/api/v1/products/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PUT,    "/api/v1/products/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PATCH,  "/api/v1/products/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasAnyRole("ADMIN", "MANAGER")
+
+                    .requestMatchers(HttpMethod.GET,    "/api/v1/suppliers/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.POST,   "/api/v1/suppliers/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PUT,    "/api/v1/suppliers/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PATCH,  "/api/v1/suppliers/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/suppliers/**").hasAnyRole("ADMIN", "MANAGER")
+
+                    .requestMatchers(HttpMethod.POST,   "/api/v1/categories/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PUT,    "/api/v1/categories/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PATCH,  "/api/v1/categories/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/categories/**").hasAnyRole("ADMIN", "MANAGER")
+
+                    .requestMatchers(HttpMethod.POST,   "/api/v1/ads/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PUT,    "/api/v1/ads/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PATCH,  "/api/v1/ads/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/ads/**").hasAnyRole("ADMIN", "MANAGER")
+
+                    .requestMatchers(HttpMethod.POST,   "/api/v1/bundles/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PUT,    "/api/v1/bundles/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PATCH,  "/api/v1/bundles/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/bundles/**").hasAnyRole("ADMIN", "MANAGER")
+
+                    .requestMatchers(HttpMethod.POST,   "/api/v1/promotions/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PUT,    "/api/v1/promotions/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PATCH,  "/api/v1/promotions/**").hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/promotions/**").hasAnyRole("ADMIN", "MANAGER")
+
+                    .requestMatchers(HttpMethod.POST,   "/api/v1/stock-adjustments/**").hasAnyRole("ADMIN", "MANAGER")
+
+                    // ADMIN-only endpoints (MANAGER cannot change store settings or users)
                     .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                    
-                    // Manager and Admin endpoints
-                    .requestMatchers(
-                        HttpMethod.POST, "/api/v1/products/**"
-                    ).hasAnyRole("ADMIN", "MANAGER")
-                    
-                    .requestMatchers(
-                        HttpMethod.PUT, "/api/v1/products/**"
-                    ).hasAnyRole("ADMIN", "MANAGER")
-                    
-                    .requestMatchers(
-                        HttpMethod.DELETE, "/api/v1/products/**"
-                    ).hasAnyRole("ADMIN", "MANAGER")
+                    .requestMatchers(HttpMethod.PUT,    "/api/v1/settings/**").hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.PATCH,  "/api/v1/settings/**").hasRole("ADMIN")
 
-                    // All other endpoints require authentication
+                    // Everything else: authenticated user of any role
                     .anyRequest().authenticated()
             }
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
-        
+
         return http.build()
     }
-    
+
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOrigins = listOf(
-            "http://localhost:3000",
-            "http://localhost:4200",
-            "http://localhost:8080"
-        )
+
+        // CORS_ORIGINS env var: comma-separated list of allowed origins.
+        // Falls back to local dev origins when not set.
+        val envOrigins = System.getenv("CORS_ORIGINS")
+        configuration.allowedOrigins = if (!envOrigins.isNullOrBlank()) {
+            envOrigins.split(",").map { it.trim() }
+        } else {
+            listOf(
+                "http://localhost:3000",
+                "http://localhost:4200",
+                "http://localhost:8080"
+            )
+        }
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
         configuration.allowCredentials = true
         configuration.maxAge = 3600L
-        
+
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)
         return source
     }
-    
+
     @Bean
-    fun passwordEncoder(): PasswordEncoder {
-        return BCryptPasswordEncoder()
-    }
+    fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 }
