@@ -102,6 +102,16 @@ cloudinary:
   api-secret: ${CLOUDINARY_API_SECRET}
   folder: ${CLOUDINARY_FOLDER:emjay}
 
+# ── Payment Gateways ──────────────────────────────────────────────────────────
+payment:
+  paystack:
+    secret-key: ${PAYMENT_PAYSTACK_SECRET_KEY:placeholder}
+  flutterwave:
+    secret-key: ${PAYMENT_FLUTTERWAVE_SECRET_KEY:placeholder}
+  stripe:
+    secret-key: ${PAYMENT_STRIPE_SECRET_KEY:placeholder}
+  callback-url: ${PAYMENT_CALLBACK_URL:http://localhost:8080/api/v1/payments}
+
 # ── Application ───────────────────────────────────────────────────────────────
 application:
   jwt:
