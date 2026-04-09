@@ -1,0 +1,12 @@
+.gradle
+build
+*.log
+logs/
+uploads/
+.idea
+*.iml
+.DS_Store
+out/
+.env
+.env.*
+README.md

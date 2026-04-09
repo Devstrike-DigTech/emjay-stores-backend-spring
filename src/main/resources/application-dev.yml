@@ -1,0 +1,58 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/emjay_dev_db
+    username: emjay_dev
+    password: emjay_dev
+  
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+  
+  devtools:
+    restart:
+      enabled: true
+    livereload:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.emjay.backend: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.orm.jdbc.bind: TRACE
+
+# Payment Gateway Configuration
+# Add these to your application.yml or application.properties
+
+payment:
+  # Paystack Configuration (Nigerian customers)
+  paystack:
+    webhook-secret: sk_test_7b4696c7f6f2b98d468e76344c65546f3ca14ba5
+    secret-key: ${PAYSTACK_SECRET_KEY:sk_test_7b4696c7f6f2b98d468e76344c65546f3ca14ba5}
+    public-key: ${PAYSTACK_PUBLIC_KEY:pk_test_4b30702cf7f90ee6ade4c487ca46995ee31d16ef}
+
+  # Flutterwave Configuration (Nigerian customers - alternative)
+  flutterwave:
+    webhook-secret: ADS-FLW-wH9x2mKqP7vZnRjT4bLcYeU3sG6dF8aE
+    secret-key: ${FLUTTERWAVE_SECRET_KEY:FLWSECK_TEST-af88cff70c1a53ab057d3ef398b32700-X}
+    public-key: ${FLUTTERWAVE_PUBLIC_KEY:FLWPUBK_TEST-45925d26a90c699d8ab81cc4ee69a2f0-X}
+
+  # Stripe Configuration (International customers)
+  stripe:
+    secret-key: ${STRIPE_SECRET_KEY:sk_test_your_stripe_secret_key}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_your_stripe_publishable_key}
+
+  # Callback URLs (update with your domain)
+  callback-url: ${PAYMENT_CALLBACK_URL:http://localhost:8080/api/v1/payments}
+
+# Webhook URLs to configure in payment dashboards:
+# Paystack: https://yourdomain.com/api/v1/payments/webhook/paystack
+# Flutterwave: https://yourdomain.com/api/v1/payments/webhook/flutterwave
+# Stripe: https://yourdomain.com/api/v1/payments/webhook/stripe
+
+server:
+  port: 8080
