@@ -32,4 +32,9 @@ USER emjay
 # Railway injects PORT env var; fall back to 8080
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "-Dspring.profiles.active=prod", "app.jar"]
+ENTRYPOINT ["java", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-XX:InitialRAMPercentage=50.0", \
+  "-Dspring.profiles.active=prod", \
+  "-jar", "app.jar"]
